@@ -1,0 +1,28 @@
+// /utils/ordersUtils.ts
+
+/**
+ * Crea un nuevo pedido enviando los datos al API.
+ * @param total Total del pedido.
+ * @param items Array de productos (debe coincidir con la estructura esperada en el backend).
+ * @returns El pedido creado o lanza un error.
+ */
+export async function createOrder(total: number, items: any[]) {
+  try {
+    const response = await fetch('/api/orders/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ total, items }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Error al crear el pedido');
+    }
+
+    return data.order;
+  } catch (error: any) {
+    console.error('Error al crear el pedido:', error.message);
+    throw error;
+  }
+}
