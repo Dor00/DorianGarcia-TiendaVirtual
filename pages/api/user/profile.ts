@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseServer } from '@/lib/supabaseServer'; // Cliente de Supabase para servidor
+import { getSupabaseServerClient } from '@/lib/supabaseServer'; // Cliente de Supabase para servidor
 import { getUserFromRequest } from '@/utils/auth'; // Utilidad para extraer el usuario desde la cookie o token
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -11,7 +11,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     try {
-      const { data, error } = await supabaseServer
+      const supabase = getSupabaseServerClient(req, res);
+
+      const { data, error } = await supabase
         .from('usuarios')
         .select('id, nombre, email, rol, imagen')
         .eq('id', user.id)
@@ -31,8 +33,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'PUT') {
     const { nombre, imagen } = req.body;
 
-    try {
-      const { error } = await supabaseServer
+    try { 
+      const supabase = getSupabaseServerClient(req, res);
+
+      const { error } = await supabase
         .from('usuarios')
         .update({ nombre, imagen })
         .eq('id', user.id);

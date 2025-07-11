@@ -4,7 +4,7 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Product } from "@/types";
+import { Product } from "@/types"; // Assuming Product interface is defined in '@/types'
 import Image from "next/image";
 import { useCart } from "@/hooks/useCart";
 import toast from "react-hot-toast";
@@ -22,9 +22,10 @@ export default function ProductDetailPage() {
 
     const fetchProduct = async () => {
       setLoading(true);
+      // FIX: Add 'creado_en' and 'actualizado_en' to the select statement
       const { data, error } = await supabase
         .from("productos")
-        .select("id, nombre, descripcion, precio, imagen_url, stock")
+        .select("id, nombre, descripcion, precio, imagen_url, stock, creado_en, actualizado_en") 
         .eq("id", id)
         .single();
 
@@ -38,7 +39,7 @@ export default function ProductDetailPage() {
     };
 
     fetchProduct();
-  }, [id]);
+  }, [id]); // Dependencia 'id' es correcta aquí
 
   const handleAddToCart = async () => {
     if (!product) return;

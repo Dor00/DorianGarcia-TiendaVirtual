@@ -30,7 +30,13 @@ export default function CartPage() {
 
   const handleCheckout = async () => {
     try {
-      const { data: { user } } = await supabaseBrowser.auth.getUser();
+      const { data: { user } } = await supabaseBrowser!.auth.getUser();
+      // Add a check for supabaseBrowser being defined
+      if (!supabaseBrowser) {
+        console.error("Supabase client not initialized.");
+        return;
+      }
+
       const userId = user?.id || null;
 
       if (cart.length === 0) {

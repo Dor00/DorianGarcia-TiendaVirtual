@@ -1,25 +1,33 @@
-// components/head/Header.jsx
+// components/head/Header.tsx
 import React from "react";
 
-export const Header = () => {
+interface HeaderProps {
+  user: {
+    nombre: string;
+    email: string;
+    rol: string;
+    imagen?: string;
+  };
+  onLogout: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
   return (
-    // Cambiado bg-white a bg-gray-900 con opacidad. Ajusta la opacidad si es necesario.
-    // También ajusté el z-index para asegurarme de que esté por encima del contenido principal, pero debajo del z-index del contenido con imagen.
     <header className="flex items-center justify-between p-4 bg-gray-900 bg-opacity-80 border-b border-solid border-slate-600 border-opacity-60 h-[88px] w-full fixed top-0 left-0 z-20 md:pl-[350px] max-md:p-2.5 max-md:h-auto">
-      <h1 className="text-2xl font-extrabold text-white md:text-4xl max-sm:text-xl"> {/* Cambiado texto a blanco para contraste */}
+      <h1 className="text-2xl font-extrabold text-white md:text-4xl max-sm:text-xl">
         Tienda Virtual
       </h1>
 
       <div className="flex items-center space-x-4">
-        <div className="text-base font-bold text-blue-400 md:text-3xl max-md:text-xl max-sm:text-base"> {/* Ajustado color para contraste */}
-          UdeA
+        <div className="text-base font-bold text-blue-400 md:text-3xl max-md:text-xl max-sm:text-base">
+          {user?.nombre ?? "UdeA"}
         </div>
 
         <div className="relative w-[200px] md:w-[321px]">
           <input
             type="text"
             placeholder="Buscar..."
-            className="w-full h-[40px] md:h-[60px] px-3 text-lg text-white text-opacity-80 bg-gray-700 border border-solid border-gray-600 rounded-md outline-none md:text-2xl" // Ajustado colores de input
+            className="w-full h-[40px] md:h-[60px] px-3 text-lg text-white text-opacity-80 bg-gray-700 border border-solid border-gray-600 rounded-md outline-none md:text-2xl"
           />
         </div>
 
@@ -31,9 +39,16 @@ export const Header = () => {
             }}
           />
           <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-sm font-light text-white md:text-2xl">
-            DG
+            {user?.nombre?.[0] ?? "U"}
           </span>
         </div>
+
+        <button
+          onClick={onLogout}
+          className="ml-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+        >
+          Cerrar sesión
+        </button>
       </div>
     </header>
   );

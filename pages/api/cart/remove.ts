@@ -26,6 +26,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const supabaseService = getServiceSupabase();
 
     // 1. Verificar si el item del carrito pertenece al usuario
+    // When selecting a relationship, Supabase often returns an array, even if it's a single record.
+    // We need to explicitly access the first element of the 'carritos' array.
     const { data: cartItem, error: cartItemError } = await supabaseService
         .from('cart_items')
         .select(`
@@ -33,13 +35,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             carritos (user_id)
         `)
         .eq('id', cartItemId)
-        .single();
+        .single(); // Using .single() implies it should return a single object, but the nested 'carritos' might still be an array.
 
-    if (cartItemError || !cartItem) {
+    if (cartItemError || !cartItem || !cartItem.carritos || cartItem.carritos.length === 0) {
         return res.status(404).json({ message: 'Cart item not found or not accessible.' });
     }
 
-    if (cartItem.carritos.user_id !== user.id) {
+    // Access the user_id from the first (and likely only) element of the carritos array
+    if (cartItem.carritos[0].user_id !== user.id) {
         return res.status(403).json({ message: 'Forbidden: This cart item does not belong to the authenticated user.' });
     }
 

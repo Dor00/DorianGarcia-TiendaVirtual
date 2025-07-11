@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabaseBrowser } from '@/lib/supabase'; // Para el cliente de Supabase del navegador
 import { DashboardSidebar } from '../sidebar/DashboardSidebar';
-import { Header } from "../../components/head/Header";
+import { Header } from "../../components/head/Header"; // Asegúrate de que la ruta sea correcta
 import { UserCrudForm } from '../../components/crud/UserCrudForm'; // componente para la gestión de usurios
 import { ProductManagementComponent } from '../admin/ProductManagementComponent'; // Componente para gestionar productos
 
@@ -69,7 +69,7 @@ export function DashboardAdmin() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, []); // fetchUserSession no tiene dependencias externas que cambien, por lo que el array está vacío
 
   useEffect(() => {
     fetchUserSession();
@@ -93,7 +93,7 @@ export function DashboardAdmin() {
         authListener.subscription.unsubscribe();
       }
     };
-  }, [fetchUserSession]);
+  }, [fetchUserSession]); // Dependencia fetchUserSession es correcta aquí
 
   const handleLogout = async () => {
     console.log("DEBUG (DashboardAdmin): Intentando cerrar sesión desde DashboardAdmin...");
@@ -136,12 +136,14 @@ export function DashboardAdmin() {
 
   return (
     <div className="flex min-h-screen bg-gray-800">
+      {/* Pasar el prop 'user' a DashboardSidebar */}
       <DashboardSidebar
         user={user}
         onNavigate={setActiveContent}
         activeContent={activeContent}
       />
       <div className="flex flex-col flex-grow">
+        {/* Pasar el prop 'user' a Header */}
         <Header user={user} onLogout={handleLogout} />
         <main className="flex-grow p-6 overflow-auto">
           {activeContent === 'dashboard' && (
@@ -150,7 +152,15 @@ export function DashboardAdmin() {
           )}
 
           {activeContent === 'user-crud' && user.rol === 'admin' && (
-            <UserCrudForm />
+            <UserCrudForm onSuccess={function (): void {
+              // Lógica a ejecutar cuando UserCrudForm completa su operación con éxito
+              console.log("Operación de usuario completada con éxito.");
+              // Opcional: recargar la lista de usuarios o mostrar un mensaje
+            }} onError={function (message: string): void {
+              // Lógica a ejecutar cuando UserCrudForm encuentra un error
+              console.error("Error en operación de usuario:", message);
+              // Opcional: mostrar un toast o mensaje de error en el dashboard
+            }} />
           )}
 
           {activeContent === 'product-management' && user.rol === 'admin' && (

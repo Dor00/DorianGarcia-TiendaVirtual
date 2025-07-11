@@ -1,6 +1,6 @@
 // /pages/api/user/orders.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseServer } from '@/lib/supabaseServer';
+import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getUserFromRequest } from '@/utils/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -15,7 +15,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'No autorizado' });
     }
 
-    const { data: orders, error } = await supabaseServer
+    const supabase = getSupabaseServerClient(req, res);
+
+    const { data: orders, error } = await supabase
       .from('orders')
       .select(`id, created_at, total, status`)
       .eq('user_id', user.id)

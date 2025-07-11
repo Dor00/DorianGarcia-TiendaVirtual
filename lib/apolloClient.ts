@@ -1,4 +1,5 @@
 // lib/apolloClient.ts
+// @ts-ignore
 import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client';
 
 let apolloClient: ApolloClient<any> | null = null;

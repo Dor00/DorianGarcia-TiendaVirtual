@@ -15,10 +15,10 @@ export const useCart = () => {
   };
 
   const syncCartToSupabase = async (cartData: CartItem[]) => {
-    const { data: { user } } = await supabaseBrowser.auth.getUser();
+    const { data: { user } } = await supabaseBrowser!.auth.getUser();
     if (!user) return;
 
-    const { error } = await supabaseBrowser
+    const { error } = await supabaseBrowser!
       .from('carts')
       .upsert({
         user_id: user.id,
@@ -35,9 +35,9 @@ export const useCart = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data: { user } } = await supabaseBrowser.auth.getUser();
+      const { data: { user } } = await supabaseBrowser!.auth.getUser();
       if (user) {
-        const { data, error } = await supabaseBrowser
+        const { data, error } = await supabaseBrowser!
           .from('carts')
           .select('items')
           .eq('user_id', user.id)

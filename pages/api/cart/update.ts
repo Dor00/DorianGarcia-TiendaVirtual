@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(404).json({ message: 'Cart item not found or not accessible.' });
     }
 
-    if (cartItem.carritos.user_id !== user.id) {
+    if (cartItem.carritos[0].user_id !== user.id) {
         return res.status(403).json({ message: 'Forbidden: This cart item does not belong to the authenticated user.' });
     }
 

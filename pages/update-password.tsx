@@ -2,8 +2,8 @@
 "use client"; // Si estás usando el App Router, necesitas esto
 import { useRouter } from 'next/router'; // O 'next/navigation' para App Router
 import React, { useState, useEffect } from 'react';
-import supabase from '@/lib/supabase'; // Asegúrate de que esta ruta es correcta
-
+import { supabaseBrowser } from '@/lib/supabase'; // Asegúrate de que esta ruta es correcta
+ 
 function UpdatePasswordPage() {
   const router = useRouter();
   const [newPassword, setNewPassword] = useState('');
@@ -43,8 +43,14 @@ function UpdatePasswordPage() {
         return;
     }
 
+    if (!supabaseBrowser) {
+      setError("Error de inicialización de Supabase.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { error: updateError } = await supabase.auth.updateUser({
+      const { error: updateError } = await supabaseBrowser.auth.updateUser({
         password: newPassword,
       });
 

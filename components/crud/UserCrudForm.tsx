@@ -1,458 +1,335 @@
 // components/crud/UserCrudForm.tsx
 "use client"; // Marca este componente como un Client Component en Next.js
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { supabaseBrowser } from '@/lib/supabase'; // Asegúrate de importar tu cliente Supabase para el navegador
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabaseBrowser } from '@/lib/supabase'; // Asegúrate de que la ruta sea correcta
+import { FormField } from '@/components/signUp/FormField'; // Reutilizando FormField
+import { EmailField } from '@/components/signUp/EmailField'; // Reutilizando EmailField
 
-// Define el esquema de validación con Zod
-const userSchema = z.object({
-  id: z.string().optional(), // ID es opcional para la creación, presente para edición
-  nombre: z.string().min(1, "El nombre es requerido."),
-  email: z.string().email("Formato de email inválido."),
-  // La contraseña es opcional al editar, pero requerida si no hay un ID (es decir, creando)
-  // Permite que sea opcional en el formulario y también una cadena vacía.
-  // La validación de longitud se aplica solo si no está vacía.
-  // IMPORTANTE: `refine` debe estar después de `optional().or(z.literal(''))` si quieres que no falle
-  // en casos donde el campo está vacío o no se proporciona.
-  contrasena: z.string()
-    .optional()
-    .or(z.literal(''))
-    .refine(val => {
-      // Si el valor es undefined o una cadena vacía, no se aplica la validación de longitud.
-      // Esto es para el caso de edición donde la contraseña puede no cambiarse.
-      if (val === undefined || val === '') return true;
-      return val.length >= 6; // Si tiene valor, debe tener al menos 6 caracteres.
-    }, "La contraseña debe tener al menos 6 caracteres si se proporciona."),
-  rol: z.enum(["admin", "user", "miembro", "cliente"], { // Asegúrate de que los roles coincidan con tu DB
-    errorMap: () => ({ message: "Rol inválido." })
-  }),
-  // Para el campo de imagen, `z.any()` es apropiado porque el `FileList` no es un tipo JS estándar.
-  // Luego, la validación y el procesamiento del `FileList` se hacen en `onSubmit`.
-  imagen: z.any().optional(), // Puede ser FileList, o undefined
-});
-
-// Tipo para los datos del formulario (antes de procesar el archivo)
-type UserFormData = z.infer<typeof userSchema>;
-
-// Tipo para el usuario que se obtiene de la API y se muestra en la tabla
+// --- Definiciones de interfaces (Asegúrate de que estas coincidan con tu esquema de datos) ---
+// Estas interfaces son ejemplos. Debes ajustarlas a la estructura real de tus datos.
 interface User {
   id: string;
   nombre: string;
   email: string;
-  rol: 'admin' | 'user' | 'miembro' | 'cliente'; // Definir los tipos de rol para mejor tipado
-  imagen?: string | null; // Puede ser string (URL) o null
-  created_at?: string;
+  rol: 'user' | 'admin';
+  imagen: string | null; // La URL de la imagen de perfil, puede ser string o null
+  // Añade aquí cualquier otro campo de usuario que manejes
 }
 
-export function UserCrudForm() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+interface FormData {
+  nombre: string;
+  email: string;
+  rol: 'user' | 'admin';
+  contrasena?: string; // Contraseña opcional para edición (no siempre se edita)
+  confirmarContrasena?: string; // Confirmación de contraseña opcional
+  imagen?: File | string | null; // Puede ser un archivo (para subir), una URL (existente), o null
+  // Añade aquí cualquier otro campo del formulario
+}
 
-  // Configuración de react-hook-form
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    watch,
-    formState: { errors }
-  } = useForm<UserFormData>({
-    resolver: zodResolver(userSchema),
-    defaultValues: {
-      nombre: '',
-      email: '',
-      contrasena: '',
-      rol: 'user',
-      imagen: undefined,
-    }
+interface UserCrudFormProps {
+  editingUser?: User | null; // Usuario que se está editando (opcional para creación)
+  onSuccess: () => void; // Callback al éxito de la operación
+  onError: (message: string) => void; // Callback al error de la operación
+}
+
+export function UserCrudForm({ editingUser, onSuccess, onError }: UserCrudFormProps) {
+  const router = useRouter();
+  const [formData, setFormData] = useState<FormData>({
+    nombre: '',
+    email: '',
+    rol: 'user',
+    contrasena: '',
+    confirmarContrasena: '',
+    imagen: null, // Inicialmente sin imagen
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [localSuccess, setLocalSuccess] = useState(false);
 
-  // Watch para el campo de archivo, útil para mostrar previsualizaciones
-  const imageFileWatcher = watch('imagen'); // Esto puede ser FileList o undefined
-
-  // Función para cargar la lista de usuarios desde la API
-  const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/auth/usuarios');
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al cargar usuarios.');
-      }
-      setUsers(data);
-    } catch (err: any) {
-      console.error('Error fetching users:', err);
-      setError(err.message || 'No se pudieron cargar los usuarios.');
-    } finally {
-      setLoading(false);
-    }
-  }, []); // useCallback para evitar recreaciones innecesarias
-
-  // useEffect para cargar usuarios al montar el componente
+  // Efecto para cargar los datos del usuario si estamos en modo edición
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]); // Dependencia: fetchUsers
+    if (editingUser) {
+      setFormData({
+        nombre: editingUser.nombre,
+        email: editingUser.email,
+        rol: editingUser.rol,
+        contrasena: '', // No precargamos contraseñas por seguridad
+        confirmarContrasena: '',
+        imagen: editingUser.imagen, // Precargamos la URL de la imagen existente
+      });
+    }
+  }, [editingUser]);
 
-  // Función que se ejecuta al enviar el formulario (crear o actualizar)
-  const onSubmit = async (formData: UserFormData) => {
+  // Manejador de cambios para campos de texto y select
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Manejador de cambios para el campo de archivo (imagen)
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+      setFormData((prev) => ({ ...prev, imagen: e.target.files![0] })); // Actualiza formData con el archivo
+    } else {
+      setSelectedFile(null);
+      setFormData((prev) => ({ ...prev, imagen: null })); // Si no hay archivo, establece imagen a null
+    }
+  };
+
+  // Manejador de envío del formulario
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault();
     setLoading(true);
-    setError(null);
-    setSuccessMessage(null);
+    setLocalError(null);
+    setLocalSuccess(false);
 
-    let finalImageUrl: string | null = null;
+    // Validación de contraseñas solo si se están proporcionando
+    if (formData.contrasena || formData.confirmarContrasena) {
+      if (formData.contrasena !== formData.confirmarContrasena) {
+        setLocalError('Las contraseñas no coinciden.');
+        setLoading(false);
+        return;
+      }
+      if (formData.contrasena && formData.contrasena.length < 6) {
+        setLocalError('La contraseña debe tener al menos 6 caracteres.');
+        setLoading(false);
+        return;
+      }
+    }
+
+    if (!supabaseBrowser) {
+      console.error("ERROR (UserCrudForm): supabaseBrowser no está inicializado.");
+      setLocalError("Error de inicialización. Por favor, recarga la página o intenta más tarde.");
+      setLoading(false);
+      return;
+    }
+
+    let finalImageURL: string | null = null; // Variable para almacenar la URL final de la imagen
 
     try {
-      // 1. Manejar la subida de la imagen si se seleccionó un archivo nuevo
-      const hasNewImageFile = imageFileWatcher instanceof FileList && imageFileWatcher.length > 0;
-      const fileToUpload = hasNewImageFile ? imageFileWatcher[0] : null;
+      // 1. Lógica para subir la imagen si se seleccionó un nuevo archivo
+      if (selectedFile) {
+        const fileExtension = selectedFile.name.split('.').pop();
+        const fileName = `${editingUser?.id || 'new_user'}-${Date.now()}.${fileExtension}`; 
+        const filePath = `avatars/${fileName}`; 
 
-      if (fileToUpload) {
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', fileToUpload);
+        const { data: uploadData, error: uploadError } = await supabaseBrowser.storage
+          .from('avatars') 
+          .upload(filePath, selectedFile, {
+            cacheControl: '3600',
+            upsert: true, 
+          });
 
-        const { data: { session }, error: sessionError } = await supabaseBrowser.auth.getSession();
-        if (sessionError || !session?.access_token) {
-          throw new Error("No hay sesión activa para subir la imagen. Por favor, inicia sesión de nuevo.");
+        if (uploadError) {
+          console.error('ERROR (UserCrudForm): Error al subir la imagen a Supabase Storage:', uploadError.message);
+          setLocalError('Error al subir la imagen de perfil: ' + uploadError.message);
+          // Si hay un error de subida, la URL final de la imagen será null o la existente
+          finalImageURL = editingUser?.imagen ?? null; 
+        } else {
+          const { data: publicUrlData } = supabaseBrowser.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+          finalImageURL = publicUrlData.publicUrl; // Asigna la URL pública de la imagen subida
+          console.log("Image uploaded successfully:", finalImageURL);
         }
-
-        const uploadResponse = await fetch('/api/upload-avatar', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`, // Necesario para tu API Route si lo usas
-          },
-          body: uploadFormData,
-        });
-
-        const uploadData = await uploadResponse.json();
-        if (!uploadResponse.ok) {
-          throw new Error(uploadData.error || 'Error al subir la imagen.');
-        }
-        finalImageUrl = uploadData.publicUrl;
-      } else if (editingUser) {
-        // En modo edición, si no hay un nuevo archivo, mantener la imagen existente
-        // a menos que el campo de imagen en el formulario se haya vaciado (lo que significa eliminar)
-        if (formData.imagen === undefined || (typeof formData.imagen === 'string' && formData.imagen === editingUser.imagen)) {
-          // No se tocó el input de archivo y no se cambió la URL, mantener la existente
-          finalImageUrl = editingUser.imagen;
-        } else if (typeof formData.imagen === 'string' && formData.imagen === '') {
-          // El input de archivo se vació o el campo de imagen se estableció a string vacío, significa eliminar
-          finalImageUrl = null;
-        }
-        // Si formData.imagen es una nueva URL (string no vacío y diferente de editingUser.imagen),
-        // entonces finalImageUrl ya se establece a esa nueva URL por defecto.
-      } else {
-        // Creando nuevo usuario sin imagen o con imagen nula
-        finalImageUrl = null;
+      } else if (typeof formData.imagen === 'string' || formData.imagen === null) {
+        // Si no se seleccionó un nuevo archivo, pero formData.imagen es una cadena (URL existente) o null
+        // Esto cubre el caso de mantener la imagen existente o borrarla si se estableció a null
+        finalImageURL = formData.imagen;
+      } else if (editingUser?.imagen) {
+        // Si no se seleccionó un nuevo archivo y no se borró la imagen,
+        // y hay una imagen existente en editingUser, la mantenemos.
+        finalImageURL = editingUser.imagen;
       }
 
-      // 2. Preparar los datos y la URL para la API de CRUD de usuarios
-      const method = editingUser ? 'PUT' : 'POST';
-      const url = `/api/auth/usuarios` + (editingUser ? `?id=${editingUser.id}` : '');
 
-      const dataToUpdateUser: Partial<UserFormData & { id?: string }> = {
+      // 2. Preparar los datos para la API
+      const userDataToSubmit: any = {
         nombre: formData.nombre,
         email: formData.email,
         rol: formData.rol,
-        imagen: finalImageUrl,
+        imagen: finalImageURL, // Usamos la URL final de la imagen
       };
 
-      // La contraseña solo se envía si se ha escrito algo y cumple la longitud mínima
-      // La validación Zod ya se encargó de la longitud
-      if (formData.contrasena && formData.contrasena !== '') { // Verifica que no sea vacía
-        dataToUpdateUser.contrasena = formData.contrasena;
+      // Si se proporcionó una contraseña, inclúyela
+      if (formData.contrasena) {
+        userDataToSubmit.contrasena = formData.contrasena;
       }
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dataToUpdateUser),
+      let apiResponse;
+      if (editingUser) {
+        // Modo edición: PATCH a la API
+        apiResponse = await fetch(`/api/auth/usuarios/${editingUser.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userDataToSubmit),
+        });
+      } else {
+        // Modo creación: POST a la API
+        apiResponse = await fetch('/api/auth/usuarios', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userDataToSubmit),
+        });
+      }
+
+      const responseData = await apiResponse.json();
+
+      if (!apiResponse.ok) {
+        throw new Error(responseData.error || `Error al ${editingUser ? 'actualizar' : 'crear'} el usuario.`);
+      }
+
+      setLocalSuccess(true);
+      setFormData({ // Limpiar formulario o resetear a valores iniciales
+        nombre: '',
+        email: '',
+        rol: 'user',
+        contrasena: '',
+        confirmarContrasena: '',
+        imagen: null,
       });
+      setSelectedFile(null);
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || `Error al ${editingUser ? 'actualizar' : 'crear'} usuario.`);
-      }
+      onSuccess(); // Llama al callback de éxito
 
-      setSuccessMessage(`Usuario ${editingUser ? 'actualizado' : 'creado'} exitosamente.`);
-      setEditingUser(null);
-      reset(); // Resetea el formulario a los defaultValues
+      // Redirigir después de un breve retraso para mostrar el mensaje de éxito
+      setTimeout(() => {
+        router.push('/admin/users'); // O la ruta que desees después de la operación
+      }, 2000);
 
-      // Limpiar el input type="file" directamente del DOM para mayor seguridad
-      const fileInput = document.getElementById('imagen') as HTMLInputElement;
-      if (fileInput) {
-        fileInput.value = '';
-      }
-
-      await fetchUsers(); // Recargar la lista de usuarios
     } catch (err: any) {
-      setError(err.message);
-      console.error(`Error ${editingUser ? 'updating' : 'creating'} user:`, err);
+      console.error("Error general durante la operación de usuario:", err);
+      setLocalError(err.message || 'Ocurrió un error inesperado.');
+      onError(err.message || 'Ocurrió un error inesperado.'); // Llama al callback de error
     } finally {
       setLoading(false);
-      setTimeout(() => {
-        setSuccessMessage(null);
-        setError(null);
-      }, 5000);
     }
-  };
-
-  // Función para manejar la edición de un usuario
-  const handleEdit = (user: User) => {
-    setEditingUser(user);
-    // Establecer los valores del formulario con los datos del usuario a editar
-    setValue('nombre', user.nombre);
-    setValue('email', user.email);
-    setValue('rol', user.rol);
-    setValue('contrasena', ''); // Siempre vaciar la contraseña al editar por seguridad
-
-    // Para la imagen:
-    // Si el usuario tiene una imagen existente, asegúrate de que se muestre.
-    // El `watch('imagen')` en el renderizado se encargará de esto si `editingUser.imagen` tiene valor.
-    // Limpiar el input de archivo explícitamente para que el usuario pueda seleccionar uno nuevo si lo desea.
-    const fileInput = document.getElementById('imagen') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = '';
-    }
-    setValue('imagen', undefined); // Limpia el valor del campo de archivo en react-hook-form
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Función para manejar la eliminación de un usuario
-  const handleDelete = async (userId: string) => {
-    if (!window.confirm('¿Estás seguro de que quieres eliminar este usuario? Esta acción es irreversible.')) {
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    setSuccessMessage(null);
-    try {
-      const response = await fetch(`/api/auth/usuarios?id=${userId}`, {
-        method: 'DELETE',
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al eliminar usuario.');
-      }
-      setSuccessMessage('Usuario eliminado exitosamente.');
-      await fetchUsers();
-    } catch (err: any) {
-      setError(err.message || 'Hubo un problema al eliminar el usuario.');
-      console.error('Error deleting user:', err);
-    } finally {
-      setLoading(false);
-      setTimeout(() => {
-        setSuccessMessage(null);
-        setError(null);
-      }, 5000);
-    }
-  };
-
-  // Función para cancelar el modo de edición y limpiar el formulario
-  const handleCancelEdit = () => {
-    setEditingUser(null);
-    reset(); // Resetea el formulario a los defaultValues
-    // Limpiar el input de archivo explícitamente
-    const fileInput = document.getElementById('imagen') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = '';
-    }
-    setError(null);
-    setSuccessMessage(null);
   };
 
   return (
-    <div className="bg-gray-800 bg-opacity-90 p-8 rounded-lg shadow-lg text-white max-w-4xl mx-auto my-8">
-      <h2 className="text-3xl font-bold mb-6 text-blue-400">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">
         {editingUser ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
       </h2>
 
-      {loading && <p className="text-blue-300 mb-4">Cargando...</p>}
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-      {successMessage && <p className="text-green-500 mb-4">{successMessage}</p>}
+      <FormField
+        label="Nombre"
+        type="text"
+        name="nombre"
+        value={formData.nombre}
+        onChange={handleChange}
+        placeholder="Nombre completo del usuario"
+        required
+      />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <div>
-          <label htmlFor="nombre" className="block text-gray-300 text-sm font-bold mb-2">Nombre:</label>
-          <input
-            type="text"
-            id="nombre"
-            {...register('nombre')}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
-          />
-          {errors.nombre && <p className="text-red-400 text-xs italic mt-1">{errors.nombre.message}</p>}
-        </div>
+      <EmailField
+        name="email"
+        value={formData.email}
+        onChange={handleChange}
+        placeholder="Correo electrónico del usuario"
+        required
+      />
 
-        <div>
-          <label htmlFor="email" className="block text-gray-300 text-sm font-bold mb-2">Email:</label>
-          <input
-            type="email"
-            id="email"
-            {...register('email')}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
-          />
-          {errors.email && <p className="text-red-400 text-xs italic mt-1">{errors.email.message}</p>}
-        </div>
+      <FormField
+        label="Contraseña (dejar en blanco para no cambiar)"
+        type="password"
+        name="contrasena"
+        value={formData.contrasena || ''} // Asegura que el valor no sea undefined
+        onChange={handleChange}
+        placeholder="Nueva contraseña"
+        minLength={6}
+      />
 
-        <div>
-          <label htmlFor="contrasena" className="block text-gray-300 text-sm font-bold mb-2">
-            Contraseña {editingUser ? '(dejar vacío para no cambiar)' : '*'}
-          </label>
-          <input
-            type="password"
-            id="contrasena"
-            {...register('contrasena')}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
-          />
-          {errors.contrasena && <p className="text-red-400 text-xs italic mt-1">{errors.contrasena.message}</p>}
-        </div>
+      <FormField
+        label="Confirmar Contraseña"
+        type="password"
+        name="confirmarContrasena"
+        value={formData.confirmarContrasena || ''} // Asegura que el valor no sea undefined
+        onChange={handleChange}
+        placeholder="Confirma la nueva contraseña"
+      />
 
-        <div>
-          <label htmlFor="rol" className="block text-gray-300 text-sm font-bold mb-2">Rol:</label>
-          <select
-            id="rol"
-            {...register('rol')}
-            className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
-          >
-            <option value="">Selecciona un rol</option>
-            <option value="admin">Administrador</option>
-            <option value="user">Usuario</option>
-            <option value="miembro">Miembro</option>
-            <option value="cliente">Cliente</option>
-          </select>
-          {errors.rol && <p className="text-red-400 text-xs italic mt-1">{errors.rol.message}</p>}
-        </div>
+      <FormField
+        label="Rol de Usuario"
+        type="select"
+        name="rol"
+        value={formData.rol}
+        onChange={handleChange}
+        required
+        options={[
+          { value: 'user', label: 'Usuario Regular' },
+          { value: 'admin', label: 'Administrador' },
+        ]}
+      />
 
-        <div className="md:col-span-2">
-          <label htmlFor="imagen" className="block text-gray-300 text-sm font-bold mb-2">Subir Imagen de Perfil (Opcional):</label>
-          <input
-            type="file"
-            id="imagen"
-            {...register('imagen')}
-            accept="image/*"
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          />
-          {errors.imagen && <p className="text-red-400 text-xs italic mt-1">{errors.imagen.message}</p>}
-
-          {/* Mostrar imagen actual del usuario o previsualización del archivo seleccionado */}
-          {((imageFileWatcher && imageFileWatcher instanceof FileList && imageFileWatcher.length > 0) || editingUser?.imagen) && (
-            <div className="mt-4">
-              <p className="text-gray-300 text-sm font-bold mb-2">Previsualización/Imagen actual:</p>
-              <img
-                src={
-                  (imageFileWatcher && imageFileWatcher instanceof FileList && imageFileWatcher.length > 0)
-                    ? URL.createObjectURL(imageFileWatcher[0]) // Previsualización del archivo recién seleccionado
-                    : editingUser?.imagen || '' // Imagen existente del usuario (o string vacío si es null/undefined)
-                }
-                alt="Previsualización de Perfil"
-                className="w-24 h-24 rounded-full object-cover border-2 border-blue-500 shadow-md"
-              />
-              {(imageFileWatcher && imageFileWatcher instanceof FileList && imageFileWatcher.length > 0) && (
-                <p className="text-gray-400 text-xs italic mt-1">Se subirá esta nueva imagen.</p>
-              )}
-              {editingUser?.imagen && !(imageFileWatcher && imageFileWatcher instanceof FileList && imageFileWatcher.length > 0) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Limpiar la imagen actual del usuario
-                    setValue('imagen', ''); // Esto establecerá el campo 'imagen' a un string vacío
-                    // Limpiar el input de tipo file
-                    const fileInput = document.getElementById('imagen') as HTMLInputElement;
-                    if (fileInput) {
-                      fileInput.value = '';
-                    }
-                    // Actualizar el editingUser localmente para que la imagen desaparezca de la previsualización
-                    setEditingUser(prev => prev ? { ...prev, imagen: null } : null);
-                  }}
-                  className="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-md text-sm"
-                >
-                  Eliminar Imagen Actual
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="md:col-span-2 flex justify-end gap-4 mt-4">
-          {editingUser && (
-            <button
-              type="button"
-              onClick={handleCancelEdit}
-              className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              disabled={loading}
-            >
-              Cancelar Edición
-            </button>
-          )}
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            disabled={loading}
-          >
-            {editingUser ? 'Guardar Cambios' : 'Crear Usuario'}
-          </button>
-        </div>
-      </form>
-
-      <h3 className="text-2xl font-bold mb-4 text-gray-200">Lista de Usuarios</h3>
-      {loading && <p className="text-blue-300 mt-4">Cargando usuarios...</p>}
-      {error && <p className="text-red-500 mt-4">Error: {error}</p>}
-      {users.length === 0 && !loading && !error && <p className="text-gray-400">No hay usuarios registrados.</p>}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-gray-700 rounded-lg shadow-md">
-          <thead>
-            <tr className="bg-gray-600 text-left text-gray-100 uppercase text-sm leading-normal">
-              <th className="py-3 px-6">Imagen</th>
-              <th className="py-3 px-6">Nombre</th>
-              <th className="py-3 px-6">Email</th>
-              <th className="py-3 px-6">Rol</th>
-              <th className="py-3 px-6 text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="text-gray-300 text-sm font-light">
-            {users.map((user) => (
-              <tr key={user.id} className="border-b border-gray-600 hover:bg-gray-600">
-                <td className="py-3 px-6 text-left">
-                  {user.imagen ? (
-                    <img
-                      src={user.imagen}
-                      alt="Avatar"
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center text-xs text-white">N/A</div>
-                  )}
-                </td>
-                <td className="py-3 px-6 text-left whitespace-nowrap">{user.nombre}</td>
-                <td className="py-3 px-6 text-left">{user.email}</td>
-                <td className="py-3 px-6 text-left">{user.rol}</td>
-                <td className="py-3 px-6 text-center">
-                  <button
-                    onClick={() => handleEdit(user)}
-                    className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-3 rounded-md mr-2"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleDelete(user.id)}
-                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-md"
-                  >
-                    Eliminar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Campo para la imagen de perfil */}
+      <div className="flex flex-col">
+        <label htmlFor="imagen" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Foto de Perfil (Opcional)
+        </label>
+        <input
+          id="imagen"
+          type="file"
+          name="imagen"
+          onChange={handleFileChange}
+          className="block w-full text-sm text-gray-500
+            file:mr-4 file:py-2 file:px-4
+            file:rounded-md file:border-0
+            file:text-sm file:font-semibold
+            file:bg-blue-50 file:text-blue-700
+            hover:file:bg-blue-100"
+        />
+        {/* Muestra la imagen actual si estamos editando y no se ha seleccionado una nueva */}
+        {editingUser?.imagen && !selectedFile && (
+          <div className="mt-2">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Imagen actual:</p>
+            <img 
+              src={editingUser.imagen} 
+              alt="Current Profile" 
+              className="w-24 h-24 object-cover rounded-full mt-1 border border-gray-300"
+            />
+          </div>
+        )}
+        {selectedFile && (
+          <p className="text-gray-400 text-sm mt-1">Archivo seleccionado: {selectedFile.name}</p>
+        )}
       </div>
-    </div>
+
+      {localError && (
+        <div className="text-red-500 text-sm text-center mt-2 p-2 bg-red-100 dark:bg-red-900 rounded-md">
+          {localError}
+        </div>
+      )}
+
+      {localSuccess && (
+        <div className="mb-4 p-3 bg-green-700 text-white text-center rounded border border-green-800 animate-fade-in-down">
+          ¡Usuario {editingUser ? 'actualizado' : 'registrado'} exitosamente! Redirigiendo...
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={loading || localSuccess}
+        className={`w-full py-3 rounded-md font-semibold text-lg transition-colors duration-200 mt-6
+          ${loading || localSuccess ? 'bg-gray-400 text-gray-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+      >
+        {loading ? 'Procesando...' : localSuccess ? 'Éxito' : (editingUser ? 'Actualizar Usuario' : 'Crear Usuario')}
+      </button>
+
+      <div className="text-center text-sm mt-4">
+        <button
+          type="button"
+          onClick={() => router.back()} // O a la ruta de listado de usuarios
+          className="text-blue-500 hover:underline font-bold transition-colors duration-200"
+        >
+          Volver
+        </button>
+      </div>
+    </form>
   );
 }
+

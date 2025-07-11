@@ -1,27 +1,22 @@
-// components/singUp/EmailField.tsx
 import * as React from "react";
 
-/**
- * @typedef {Object} EmailFieldProps
- * @property {string} name
- * @property {string} value
- * @property {(e: React.ChangeEvent<HTMLInputElement>) => void} onChange
- * @property {string} [placeholder]
- * @property {boolean} [required]
- * @property {string} [className]
- */
+interface EmailFieldProps {
+  name: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  required?: boolean;
+  className?: string;
+}
 
-/**
- * @param {EmailFieldProps} props
- */
 export function EmailField({
   name,
   value,
   onChange,
-  placeholder = "@udea.edu.co", // Default placeholder
+  placeholder = "@example.google.co",
   required = false,
   className = ""
-}) {
+}: EmailFieldProps) {
   return (
     <div className={`w-full ${className}`}>
       <label htmlFor={name} className="block text-gray-300 text-sm font-medium mb-2">
