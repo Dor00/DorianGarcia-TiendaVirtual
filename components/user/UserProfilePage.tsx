@@ -4,15 +4,22 @@ import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase";
 import { useRouter } from "next/router";
 
+interface UserProfilePageProps {
+  userId: string;
+}
+
+
+
 interface UserProfile {
   id: string;
   nombre: string;
   email: string;
   rol: string;
   imagen?: string | null;
+  
 }
 
-export default function UserProfilePage() {
+export default function UserProfilePage({ userId }: UserProfilePageProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +39,7 @@ export default function UserProfilePage() {
 
       const { data, error } = await supabaseBrowser!
         .from("usuarios")
-        .select("id, nombre, email, rol, imagen")
+        .select("id, nombre, email, rol, imagen, userId")
         .eq("id", user.id)
         .single();
 
