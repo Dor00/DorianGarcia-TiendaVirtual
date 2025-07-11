@@ -5,10 +5,14 @@ import { ShoppingCart } from 'lucide-react';
 import React from 'react';
 
 export function CarritoFlotante() {
-  const { cart, localCartCount } = useCart();
+  // Removed localCartCount as it's not provided by the useCart hook's type definition.
+  // The totalItems calculation will now solely rely on the 'cart' object.
+  const { cart } = useCart();
   const router = useRouter();
 
-  const totalItems = cart?.items?.reduce((sum, item) => sum + item.cantidad, 0) || localCartCount;
+  // Calculate totalItems directly from the cart array.
+  // If cart is null/undefined or empty, it defaults to 0.
+  const totalItems = cart?.reduce((sum: any, item: { cantidad: any; }) => sum + item.cantidad, 0) || 0;
 
   return (
     <div
