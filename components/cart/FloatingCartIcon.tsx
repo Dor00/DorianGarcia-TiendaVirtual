@@ -7,7 +7,7 @@ export default function FloatingCartIcon() {
   const router = useRouter();
   const { cart } = useCart();
 
-  const totalItems = cart?.items?.reduce((sum, item) => sum + item.cantidad, 0) || 0;
+  const totalItems = cart?.reduce((sum, item) => sum + item.cantidad, 0) || 0;
 
   return (
     <button
