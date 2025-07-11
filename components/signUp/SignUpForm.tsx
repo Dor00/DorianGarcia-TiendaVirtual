@@ -53,7 +53,8 @@ export function SignUpForm({ onSignUpSuccess, onError }: SignUpFormProps) {
 
   interface HandleSubmitEvent extends React.FormEvent<HTMLFormElement> {}
 
-  // Removed the empty UploadResponse interface as it was causing an ESLint error.
+  // Removed the empty UploadResponse interface. This was the source of the error.
+  // The type for uploadData is inferred directly from the supabaseBrowser.storage.upload call.
 
   interface RegisterResponse {
     error?: string;
@@ -309,6 +310,3 @@ export function SignUpForm({ onSignUpSuccess, onError }: SignUpFormProps) {
     </form>
   );
 }
-
-
-

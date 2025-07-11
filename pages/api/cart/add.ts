@@ -9,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
- const supabase = getSupabaseServerClient(req, res);
+  const supabase = getSupabaseServerClient(req, res);
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -26,16 +26,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const supabaseService = getServiceSupabase();
 
     // 1. Obtener el carrito del usuario (o crearlo si no existe)
-    let { data: cart, error: cartError } = await supabaseService
+    // Destructure the data and error from the Supabase call
+    const { data: fetchedCart, error: initialCartError } = await supabaseService
       .from('carritos')
       .select('id')
       .eq('user_id', user.id)
       .single();
+    
+    // Declare 'cart' with 'let' because it might be reassigned if a new cart is created.
+    let cart = fetchedCart;
+    // Declare 'cartError' with 'const' because its value is not reassigned after initialization.
+    const cartError = initialCartError;
 
-    if (cartError && cartError.code !== 'PGRST116') {
+    if (cartError && cartError.code !== 'PGRST116') { // PGRST116 means 'No rows found'
       throw cartError;
     }
 
+    // Si no hay carrito, crear uno nuevo
     if (!cart) {
       const { data: newCart, error: newCartError } = await supabaseService
         .from('carritos')
@@ -45,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (newCartError || !newCart) {
         throw newCartError || new Error('Failed to create new cart.');
       }
-      cart = newCart;
+      cart = newCart; // Reassign the 'cart' variable here
     }
 
     const cartId = cart.id;
