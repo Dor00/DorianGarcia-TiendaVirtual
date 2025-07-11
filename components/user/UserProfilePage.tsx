@@ -23,14 +23,14 @@ export default function UserProfilePage() {
     setLoading(true);
     setError(null);
     try {
-      const { data: { user }, error: authError } = await supabaseBrowser.auth.getUser();
+      const { data: { user }, error: authError } = await supabaseBrowser!.auth.getUser();
 
       if (authError || !user) {
         router.push("/login");
         return;
       }
 
-      const { data, error } = await supabaseBrowser
+      const { data, error } = await supabaseBrowser!
         .from("usuarios")
         .select("id, nombre, email, rol, imagen")
         .eq("id", user.id)
@@ -57,7 +57,7 @@ export default function UserProfilePage() {
     try {
       if (!profile) return;
 
-      const { error } = await supabaseBrowser
+      const { error } = await supabaseBrowser!
         .from("usuarios")
         .update({ nombre })
         .eq("id", profile.id);

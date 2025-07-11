@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase";
-import { Order } from "@/types";
+
+interface Order {
+  id: string;
+  total: number;
+  status: string;
+  created_at: string;
+  user_id: string;
+}
 
 export default function UserOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -26,7 +33,8 @@ export default function UserOrdersPage() {
 
       const { data, error } = await supabaseBrowser
         .from("orders")
-        .select("id, total, status, created_at")
+        .select("id, total, status, created_at, user_id")
+
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
