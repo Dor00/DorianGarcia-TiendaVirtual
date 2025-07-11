@@ -16,10 +16,10 @@ function OrdersPage() {
 
   useEffect(() => {
     const fetchPedidos = async () => {
-      const { data: { user } } = await supabaseBrowser.auth.getUser();
+      const { data: { user } } = await supabaseBrowser!.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabaseBrowser
+      const { data, error } = await supabaseBrowser!
         .from("orders")
         .select("*")
         .eq("user_id", user.id)
