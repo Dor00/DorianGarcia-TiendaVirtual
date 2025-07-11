@@ -51,10 +51,8 @@ export function SignUpForm({ onSignUpSuccess, onError }: SignUpFormProps) {
     }
   };
 
-  interface HandleSubmitEvent extends React.FormEvent<HTMLFormElement> {}
-
-  // Removed the empty UploadResponse interface. This was the source of the error.
-  // The type for uploadData is inferred directly from the supabaseBrowser.storage.upload call.
+  // Se eliminó la interfaz HandleSubmitEvent ya que no agregaba miembros adicionales
+  // a React.FormEvent<HTMLFormElement>, haciéndola redundante.
 
   interface RegisterResponse {
     error?: string;
@@ -62,7 +60,7 @@ export function SignUpForm({ onSignUpSuccess, onError }: SignUpFormProps) {
     session?: { access_token: string }; 
   }
 
-  const handleSubmit = async (e: HandleSubmitEvent): Promise<void> => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => { // Usamos directamente React.FormEvent<HTMLFormElement>
     e.preventDefault();
     setLoading(true);
     setLocalError(''); 
