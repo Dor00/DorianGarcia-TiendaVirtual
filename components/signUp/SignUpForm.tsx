@@ -53,10 +53,7 @@ export function SignUpForm({ onSignUpSuccess, onError }: SignUpFormProps) {
 
   interface HandleSubmitEvent extends React.FormEvent<HTMLFormElement> {}
 
-  interface UploadResponse {
-    publicUrl: string;
-    error?: string;
-  }
+  // Removed the empty UploadResponse interface as it was causing an ESLint error.
 
   interface RegisterResponse {
     error?: string;
@@ -139,7 +136,7 @@ export function SignUpForm({ onSignUpSuccess, onError }: SignUpFormProps) {
         const fileName = `${registeredUserId}-${Date.now()}.${fileExtension}`; 
         const filePath = `avatars/${fileName}`; 
 
-        const { data: uploadData, error: uploadError } = await supabaseBrowser.storage
+        const { error: uploadError } = await supabaseBrowser.storage
           .from('avatars') 
           .upload(filePath, selectedFile, {
             cacheControl: '3600',
@@ -153,8 +150,8 @@ export function SignUpForm({ onSignUpSuccess, onError }: SignUpFormProps) {
           // El usuario puede subir una imagen después de registrarse si lo desea.
         } else {
             const { data: publicUrlData } = supabaseBrowser.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
+              .from('avatars')
+              .getPublicUrl(filePath);
             imageUrl = publicUrlData.publicUrl;
             console.log("Image uploaded successfully:", imageUrl);
 
@@ -257,14 +254,25 @@ export function SignUpForm({ onSignUpSuccess, onError }: SignUpFormProps) {
         className="mt-2"
       />
 
-      <FormField
-        label="Foto de Perfil (Opcional)"
-        type="file"
-        name="imagen"
-        value={""} // Asegúrate de que esto sea "" para inputs de tipo file
-        onChange={handleFileChange}
-        className="mt-2"
-      />
+      {/* Directly using a standard input for file upload to avoid type conflicts with FormField */}
+      <div className="flex flex-col">
+        <label htmlFor="imagen" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Foto de Perfil (Opcional)
+        </label>
+        <input
+          id="imagen"
+          type="file"
+          name="imagen"
+          onChange={handleFileChange}
+          className="block w-full text-sm text-gray-500
+            file:mr-4 file:py-2 file:px-4
+            file:rounded-md file:border-0
+            file:text-sm file:font-semibold
+            file:bg-blue-50 file:text-blue-700
+            hover:file:bg-blue-100"
+        />
+      </div>
+
       {selectedFile && (
         <p className="text-gray-400 text-sm mt-1">Archivo seleccionado: {selectedFile.name}</p>
       )}
@@ -301,3 +309,6 @@ export function SignUpForm({ onSignUpSuccess, onError }: SignUpFormProps) {
     </form>
   );
 }
+
+
+
