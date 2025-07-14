@@ -1,14 +1,15 @@
 "use client";
 import { useUser } from "@supabase/auth-helpers-react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+//import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { supabaseBrowser } from '@/lib/supabase';
 import Link from "next/link";
 
 export default function Navbar() {
   const user = useUser();
-  const supabase = createClientComponentClient();
+  //const supabase = createClientComponentClient();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await supabaseBrowser.auth.signOut();
     window.location.reload(); // Refresca la página para actualizar el estado del Navbar
   };
 

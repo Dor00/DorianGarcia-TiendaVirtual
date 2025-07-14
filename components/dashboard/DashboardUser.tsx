@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { supabaseBrowser } from '@/lib/supabase'; // Asegúrate de que esta ruta sea correcta
 import { useRouter } from 'next/router'; // Importa useRouter para la navegación
 import { SideBar } from '@/components/sidebar/userSideBar'; // Ruta correcta de tu SideBar
+import Link from 'next/link';
 
 interface UserProfile {
   id: string;
@@ -122,16 +123,34 @@ export function DashboardUser() {
           
           {/* Contenido específico del dashboard de Usuario */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-gray-800 p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-2">Mis Pedidos</h2>
-              <p className="text-gray-400">Consulta el estado de tus compras.</p>
-              {/* Enlace o botón para ver pedidos */}
+            
+            <div className="relative flex flex-wrap gap-5 justify-between px-8 py-4 w-full bg-gray-800 bg-opacity-80 border-t border-gray-700 max-md:px-5">
+              <Link 
+                href="/user/orders" 
+                className="absolute inset-0 z-10" 
+                aria-label="Ver pedidos"
+              />
+              
+              <p className="my-auto text-xl text-gray-300 max-md:max-w-full">Explora tus pedidos recientes.</p>
+              <div className="text-3xl font-bold text-blue-500 max-md:text-2xl">
+                Mis Pedidos
+              </div>
             </div>
-            <div className="bg-gray-800 p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-2">Mi Perfil</h2>
-              <p className="text-gray-400">Actualiza tu información personal.</p>
-              {/* Enlace o botón para editar perfil */}
+                        
+            <div className="relative flex flex-wrap gap-5 justify-between px-8 py-4 w-full bg-gray-800 bg-opacity-80 border-t border-gray-700 max-md:px-5">
+              <Link 
+                href="/user/profile" 
+                className="absolute inset-0 z-10" 
+                aria-label="Ver perfil"
+              />
+              
+              <p className="my-auto text-xl text-gray-300 max-md:max-w-full">Actualiza tu información personal.</p>
+              <div className="text-3xl font-bold text-blue-500 max-md:text-2xl">
+                Mi profile
+              </div>
             </div>
+
+            
             {/* Más tarjetas o componentes específicos de Usuario */}
           </div>
         </main>

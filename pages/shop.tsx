@@ -5,7 +5,7 @@ import { Product } from '@/types';
 import ProductCard from '@/components/ui/ProductCard';
 import { useCart } from '@/hooks/useCart';
 import toast from 'react-hot-toast';
-import { supabase } from '@/lib/supabaseClient';
+import { supabaseBrowser } from '@/lib/supabase';
 import Navbar from '@/components/shop/Navbar';
 import { useRouter } from 'next/router';
 
@@ -20,7 +20,7 @@ function ShopPage() {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseBrowser
           .from('productos')
           .select('id, nombre, descripcion, precio, imagen_url, stock');
 

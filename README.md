@@ -2,7 +2,7 @@
 
 # 🛒 Tienda Virtual con Next.js, Supabase y MercadoPago
 
-**Autor**: Dorian García
+**Autor**: Dorian García Giraldo
 **Fecha**: Julio 2025
 
 ---
@@ -248,11 +248,11 @@ Para realizar el pago en mercadoPago en modo prueba desde lo local, debes inicia
 • inicializar ngrok desde la terminal, en mi caso en visual studio code:
 ngrok http 3000
 
-Adem+as debes de configurar la url publica en .env. Esta URL es dinámica y cambia cada vez que ejecutas el servidor ngrok
-• NEXT_PUBLIC_SITE_URL= https://75df4872bb1b.ngrok-free.app
+  Además debes de configurar la url pública en .env. Esta URL es dinámica y cambia cada vez que ejecutas el servidor ngrok.
+  Ejemplo de url pública
+  • NEXT_PUBLIC_SITE_URL= https://75df4872bb1b.ngrok-free.app
 
-•	Puedes seguir usando tarjetas de prueba y credenciales sandbox al desplegar en Vercel, para ello usa la tarjeta de crédito 
-para realizar el pago de prueba.
+•	Se debe usar  tarjetas de prueba y credenciales sandbox al desplegar en Vercel, para ello usa la siguiente tarjeta de crédito de prueba para simular el pago de un pedido en mercadoPago.
 
 tarjeta de prueba en mercadoPago:
 visa:
@@ -261,5 +261,13 @@ Vencimiento: 11/30
 CVV: 123
 Titular: APRO.
 Doc identificación: 123456789
+
+
+### Capturas de MER y proceso de autenticación en supabase
+
+| MER | Diagrama Autenticación en supabase |
+|-----|------------------------------------|
+| ![MER](/docs/MER.png) | ![Autenticacion](/docs/autenticacion_supabase.png) |
+
 
 

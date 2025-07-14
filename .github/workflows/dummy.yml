@@ -1,0 +1,7 @@
+name: Empty workflow
+on: workflow_dispatch  # Solo se ejecutará manualmente
+jobs:
+  do-nothing:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Workflow vacío"

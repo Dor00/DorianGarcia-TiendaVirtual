@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from 'next/navigation';
 import { FormField } from "./FormField";
 import { EmailField } from "./EmailField";
-import { supabaseBrowser } from '@/lib/supabase';
+import { supabaseBrowser } from '@/lib/supabase'; // Importa el cliente de Supabase
 
 export function SignUpForm() {
   const router = useRouter();

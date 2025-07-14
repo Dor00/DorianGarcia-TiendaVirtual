@@ -122,7 +122,7 @@ export default function LoginFormDesktop() {
         priority
       />
 
-      <div className="relative z-10 flex flex-col self-center max-w-sm w-full px-6 py-10 bg-black bg-opacity-50 text-white rounded-lg shadow-xl backdrop-blur-sm">
+      <div className="relative z-10 flex flex-col self-center max-w-sm w-full px-6 py-10 text-white rounded-lg shadow-xl backdrop-blur-sm">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white">Tienda Virtual</h1>
           <p className="text-xl text-gray-300 mt-2">Iniciar Sesión</p>
@@ -130,7 +130,10 @@ export default function LoginFormDesktop() {
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4 w-full">
           <div>
-            <label htmlFor="email" className="block text-gray-300 text-sm mb-2">Correo electrónico</label>
+            <label htmlFor="email" className="block text-gray-100 font-medium text-sm mb-2">
+              Correo electrónico
+            </label>
+            
             <input
               id="email"
               type="email"
@@ -144,7 +147,8 @@ export default function LoginFormDesktop() {
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-gray-300 text-sm mb-2">Contraseña</label>
+            <label htmlFor="password" className="block text-gray-100 font-medium text-sm mb-2">
+              Contraseña</label>
             <input
               id="password"
               type="password"

@@ -7,8 +7,8 @@ import { ActionButtons } from "../components/inicial/ActionButtons";
 import { Footer } from "../components/inicial/Footer";
 
 export default function HomeDesktop() {
-  // ¡Ahora usamos la ruta de tu imagen local!
-  const backgroundImageSrc = "/fondoInicial.png"; // Ruta directa desde la carpeta 'public'
+  
+  const backgroundImageSrc = "/fondoInicial.png"; // Ruta directa de la imagen de fondo desde la carpeta public
 
   return (
     <main className="flex overflow-hidden relative flex-col text-center min-h-screen bg-gray-900">
@@ -26,7 +26,7 @@ export default function HomeDesktop() {
         <Header title="Tienda Virtual" />
         <ActionButtons />
         <Footer
-          tagline="Experimenta el futuro de las compras."
+          tagline="dorian.garcia@udea.edu.co"
           brandName="UdeA"
         />
       </div>
