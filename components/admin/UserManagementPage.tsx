@@ -37,7 +37,7 @@ export function UserManagementPage() {
 
     let authListener: { subscription: { unsubscribe: () => void } } | null = null;
     if (supabaseBrowser) {
-      const { data } = supabaseBrowser.auth.onAuthStateChange((_event, session) => {
+      const { data } = supabaseBrowser.auth.onAuthStateChange((_event: any, session: { access_token: any; }) => {
         setAccessToken(session?.access_token || null);
       });
       authListener = data;
