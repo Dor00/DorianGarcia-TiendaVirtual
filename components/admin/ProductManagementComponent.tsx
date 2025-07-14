@@ -1,4 +1,4 @@
-// components/admin/ProductManagementComponent.tsx
+//components/admin/ProductManagementComponent.tsx.
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
