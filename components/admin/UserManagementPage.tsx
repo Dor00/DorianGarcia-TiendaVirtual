@@ -1,4 +1,5 @@
 // components/admin/UserManagementPage.tsx
+// This file is part of a Next.js application for managing users in an admin panel.
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
