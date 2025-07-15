@@ -149,9 +149,20 @@ export function DashboardUser() {
                 Mi profile
               </div>
             </div>
+            <div className="relative flex flex-wrap gap-5 justify-between px-8 py-4 w-full bg-gray-800 bg-opacity-80 border-t border-gray-700 max-md:px-5">
+              <Link 
+                href="/shop" 
+                className="absolute inset-0 z-10" 
+                aria-label="Tienda Virtual"
+              />
+              
+              <p className="my-auto text-xl text-gray-300 max-md:max-w-full">Ingresa a la tienda virtual.</p>
+              <div className="text-3xl font-bold text-blue-500 max-md:text-2xl">
+                Tienda Virtual
+              </div>
 
             
-            {/* Más tarjetas o componentes específicos de Usuario */}
+            {/* Más tarjetas o componentes específicos de Usuario */}</div>
           </div>
         </main>
       </div>

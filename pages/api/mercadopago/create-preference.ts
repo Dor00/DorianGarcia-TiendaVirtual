@@ -27,9 +27,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         currency_id: 'COP',
       })),
       back_urls: {
-        success: `${process.env.NEXT_PUBLIC_SITE_URL}/success`,
-        failure: `${process.env.NEXT_PUBLIC_SITE_URL}/cart?status=failure`,
-        pending: `${process.env.NEXT_PUBLIC_SITE_URL}/cart?status=pending`,
+        success: `https://doriangarcia-tienda-virtual.vercel.app/success`,
+        failure: `https://doriangarcia-tienda-virtual.vercel.app/cart?status=failure`,
+        pending: `https://doriangarcia-tienda-virtual.vercel.app/cart?status=pending`,
       },
 
       auto_return: 'approved',
