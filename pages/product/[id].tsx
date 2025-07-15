@@ -1,10 +1,9 @@
 // pages/product/[id].tsx 
-
 "use client";
 
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabaseBrowser } from "@/lib/supabase"; // Adjust the import path as necessary
 import { Product } from "@/types"; // Assuming Product interface is defined in '@/types'
 import Image from "next/image";
 import { useCart } from "@/hooks/useCart";
@@ -23,7 +22,7 @@ export default function ProductDetailPage() {
 
     const fetchProduct = async () => {
       setLoading(true);      
-      const { data, error } = await supabase
+      const { data, error } = await supabaseBrowser
         .from("productos")
         .select("id, nombre, descripcion, precio, imagen_url, stock, creado_en, actualizado_en") 
         .eq("id", id)
