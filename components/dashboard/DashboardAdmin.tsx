@@ -73,7 +73,7 @@ export function DashboardAdmin() {
     let authListener: any = null;
     if (supabaseBrowser) {
       const { data } = supabaseBrowser.auth.onAuthStateChange(
-        (event, session) => {
+        (event: string, session: any) => {
           console.log("DEBUG (DashboardAdmin): Auth state changed:", event);
           if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
             fetchUserSession();

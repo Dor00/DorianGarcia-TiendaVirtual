@@ -44,7 +44,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
     if (supabaseBrowser) {
       authListener = supabaseBrowser.auth.onAuthStateChange(
-        async (_event, currentSession) => {
+        async (_event: any, currentSession: React.SetStateAction<Session | null>) => {
           setSession(currentSession);
           const currentPath = window.location.pathname;
           const currentPathIsPublic = publicRoutes.includes(currentPath);
