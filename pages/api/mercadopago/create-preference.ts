@@ -1,4 +1,4 @@
-//pages/api/mercadopago/create-preference.ts
+// api/mercadopago/create-preference.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 
@@ -37,7 +37,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         order_id, // Aquí pasamos el order_id para que el webhook lo use
       },
     };
-
     const preferenceClient = new Preference(mercadopago);
     const response = await preferenceClient.create({ body: preference });
     return res.status(200).json({ init_point: response.init_point });
