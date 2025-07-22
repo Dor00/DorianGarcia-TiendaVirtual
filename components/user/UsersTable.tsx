@@ -113,11 +113,11 @@ export function UsersTable({ users, onEdit, onDelete, loading, error }: UsersTab
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.rol === 'admin' 
+                      user.roles?.nombre === 'admin' 
                         ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                         : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                     }`}>
-                      {user.rol === 'admin' ? 'Administrador' : 'Usuario'}
+                      {user.roles?.nombre === 'admin' ? 'Administrador' : 'Usuario'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

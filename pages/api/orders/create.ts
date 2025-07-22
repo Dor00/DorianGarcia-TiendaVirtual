@@ -1,7 +1,6 @@
-// api/orders/create.ts
-
+// pages/api/orders/create.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { getServiceSupabase } from '@/lib/supabaseService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -10,46 +9,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { total, items, user_id } = req.body;
 
-  if (!total || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ error: 'Datos inválidos' });
+  if (!user_id || !items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'Datos incompletos para crear el pedido' });
   }
 
   try {
-    const supabase = getSupabaseServerClient(req, res);
+    const supabase = getServiceSupabase();
 
-    // Crear el pedido
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .insert([{ total, status: 'pendiente', user_id }])
-      .select('id')
+      .insert([{ total, user_id, status: 'pendiente' }])
+      .select()
       .single();
 
-    if (orderError || !order) {
-      console.error('Error creando pedido:', orderError?.message);
+    if (orderError) {
+      console.error('Error al crear el pedido:', orderError.message);
       return res.status(500).json({ error: 'Error al crear el pedido' });
     }
 
-    // Crear los items del pedido
-    const orderItems = items.map((item: any) => ({
+    const orderItemsPayload = items.map((item: any) => ({
       order_id: order.id,
       product_id: item.productos.id,
       cantidad: item.cantidad,
       nombre_producto: item.productos.nombre,
-      precio_unitario: item.productos.precio, // IMPORTANTE: este campo es obligatorio en tu tabla
+      precio_unitario: item.productos.precio,
     }));
 
-    const { error: itemsError } = await supabase
+    const { error: orderItemsError } = await supabase
       .from('order_items')
-      .insert(orderItems);
+      .insert(orderItemsPayload);
 
-    if (itemsError) {
-      console.error('Error creando items del pedido:', itemsError.message);
+    if (orderItemsError) {
+      console.error('Error al crear los items del pedido:', orderItemsError.message);
       return res.status(500).json({ error: 'Error al crear los items del pedido' });
     }
 
-    return res.status(200).json({ order });
-  } catch (error: any) {
-    console.error('Error creando pedido:', error.message);
-    return res.status(500).json({ error: 'Error interno' });
+    return res.status(200).json({ message: 'Pedido creado con éxito', order });
+  } catch (err: any) {
+    console.error('Error inesperado al crear el pedido:', err.message);
+    return res.status(500).json({ error: 'Error inesperado en el servidor' });
   }
 }

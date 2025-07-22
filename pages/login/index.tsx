@@ -1,5 +1,5 @@
 // pages/login/index.tsx
-"use client";
+"use client"; 
 
 import LoginFormDesktop from '@/components/login/LoginFormDesktop';
 

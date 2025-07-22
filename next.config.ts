@@ -8,7 +8,7 @@ const nextConfig = {
     //   'cdn.builder.io',
     //   'images.unsplash.com',
     // ],
-    
+    domains: ['lh3.googleusercontent.com'],
     // AÑADE la propiedad 'remotePatterns'
     remotePatterns: [
       {

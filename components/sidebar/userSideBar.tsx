@@ -7,7 +7,7 @@ interface UserProfile {
   id: string;
   nombre: string;
   email: string;
-  rol: string;
+  id_rol: string;
   imagen?: string | null;
 }
 
@@ -50,9 +50,7 @@ export function SideBar({ userProfile, onLogout }: SideBarProps) {
         {/* Email del Usuario */}
         <p className="text-gray-400 text-sm">{userProfile?.email || 'cargando@ejemplo.com'}</p>
         {/* Rol del Usuario */}
-        <span className="inline-block bg-blue-600 text-white text-xs font-semibold px-2.5 py-0.5 rounded-full mt-2">
-          {userProfile?.rol || 'Rol'}
-        </span>
+       
       </div>
 
       {/* Navegación del Dashboard */}

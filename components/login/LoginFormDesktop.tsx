@@ -20,22 +20,29 @@ export default function LoginFormDesktop() {
 
   useEffect(() => {
     const registrationSuccess = searchParams.get('registro');
-
+    const loginError = searchParams.get('error');
+  
     if (registrationSuccess === 'exitoso' && !hasProcessedRegistrationParam.current) {
       setMessage('¡Registro exitoso! Por favor, inicia sesión con tus nuevas credenciales.');
       hasProcessedRegistrationParam.current = true;
-
+  
       const newSearchParams = new URLSearchParams(searchParams.toString());
       newSearchParams.delete('registro');
       router.replace(`/login?${newSearchParams.toString()}`);
-    } else if (registrationSuccess !== 'exitoso') {
-      setMessage(null);
+    } else if (loginError && !hasProcessedRegistrationParam.current) {
+      setError(decodeURIComponent(loginError));
+      hasProcessedRegistrationParam.current = true;
+  
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.delete('error');
+      router.replace(`/login?${newSearchParams.toString()}`);
+    } else {
       hasProcessedRegistrationParam.current = false;
     }
-
+  
     setLoading(false);
-    setError(null);
   }, [searchParams, router]);
+  
 
   const handleLogin = async (event: FormEvent) => {
     event.preventDefault();
@@ -44,27 +51,22 @@ export default function LoginFormDesktop() {
     setMessage(null);
 
     try {
-      if (!supabaseBrowser) {
+      const supabase = supabaseBrowser;
+      if (!supabase) {
         setError('Error interno: No se pudo inicializar Supabase.');
         setLoading(false);
         return;
       }
 
-      const { data, error: signInError } = await supabaseBrowser.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (signInError) {
-        console.error('Error de inicio de sesión:', signInError);
-        if (signInError.message === 'Invalid login credentials') {
-          setError('Correo electrónico o contraseña incorrectos.');
-        } else if (signInError.message.includes('Email not confirmed')) {
-          setError('Tu cuenta no ha sido confirmada. Revisa tu correo electrónico.');
-        } else {
-          setError(signInError.message || 'Ocurrió un error inesperado al iniciar sesión.');
-        }
-        setLoading(false);
+       
+        setError('Credenciales incorrectas. Intenta nuevamente.');
+        setLoading(false); 
         return;
       }
 
@@ -75,26 +77,26 @@ export default function LoginFormDesktop() {
       }
 
       const userId = data.user.id;
-      const { data: userData, error: userProfileError } = await supabaseBrowser
-        .from('usuarios')
-        .select('rol')
+      const { data: userData, error: userProfileError } = await supabase
+        .from('usuarios')        
+        .select("id_rol") // Select id_rol and the name from the joined roles table
         .eq('id', userId)
         .single();
 
       if (userProfileError || !userData) {
         setError('No se pudo obtener la información de tu perfil. Contacta a soporte.');
-        await supabaseBrowser.auth.signOut();
+        await supabase.auther.auth.signOut();
         setLoading(false);
         return;
       }
 
-      const userRole = userData.rol;
+      const userRole = userData.id_rol;
       setMessage('Inicio de sesión exitoso. Redirigiendo...');
 
       setTimeout(() => {
-        if (userRole === 'admin') {
+        if (userRole === 'a5adbe7e-105d-4908-b3ce-9082e19ddf6c') {
           router.push('/admin/dashboard');
-        } else if (userRole === 'user') {
+        } else if (userRole === '053ee653-f7fd-4ecd-b6b3-d2e307b5f7fc') {
           router.push('/shop');
         } else {
           setError('Tu rol de usuario no está definido o es inválido.');
@@ -110,6 +112,27 @@ export default function LoginFormDesktop() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    const supabase = supabaseBrowser;
+    if (!supabase) {
+      setError('Cliente de Supabase no disponible');
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`
+      }
+    });
+  
+    if (error) {
+      console.error('Error al iniciar sesión con Google:', error.message);
+      setError('No se pudo iniciar sesión con Google');
+    }
+  };
+  
+  
   return (
     <main className="relative flex justify-center items-center min-h-screen p-4 font-sans">
       <Image
@@ -133,7 +156,6 @@ export default function LoginFormDesktop() {
             <label htmlFor="email" className="block text-gray-100 font-medium text-sm mb-2">
               Correo electrónico
             </label>
-            
             <input
               id="email"
               type="email"
@@ -148,7 +170,8 @@ export default function LoginFormDesktop() {
           </div>
           <div>
             <label htmlFor="password" className="block text-gray-100 font-medium text-sm mb-2">
-              Contraseña</label>
+              Contraseña
+            </label>
             <input
               id="password"
               type="password"
@@ -170,6 +193,15 @@ export default function LoginFormDesktop() {
               {message}
             </div>
           )}
+          
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            className="w-full py-3 rounded-md font-semibold text-lg bg-red-600 hover:bg-red-700 text-white mt-2"
+          >
+            Iniciar sesión con Google
+          </button>
+          
           <button
             type="submit"
             disabled={loading}

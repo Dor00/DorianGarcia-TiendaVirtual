@@ -40,9 +40,7 @@ export function DashboardSidebar({ user, onNavigate, activeContent }: DashboardS
   const defaultUserImage = "https://cdn.builder.io/api/v1/image/assets/TEMP/a1e45798d5f78408434a975f8c7bf8fe47a4769a?placeholderIfAbsent=true";
 
   return (
-    // Adjusted width classes for better responsiveness
     <nav className="w-72 md:w-80 bg-gray-900 bg-opacity-80 border-r border-solid border-gray-700 flex flex-col pb-4 max-md:w-full max-sm:h-auto max-sm:relative z-20 min-h-screen">
-      {/* Adjusted padding-top to align with header, reduced for smaller screens */}
       <div className="p-4 flex flex-col gap-2 pt-[100px] md:pt-[100px] max-sm:pt-[70px]">
         {user && (
           <div className="flex flex-col items-center mb-6">
@@ -53,7 +51,8 @@ export function DashboardSidebar({ user, onNavigate, activeContent }: DashboardS
             />
             <p className="text-white text-xl font-semibold mb-1 md:text-2xl">{user.nombre}</p>
             <p className="text-gray-300 text-base mb-1 md:text-lg">{user.email}</p>
-            <p className="text-gray-400 text-sm italic md:text-base">{user.rol}</p>
+            {/* CORRECTED: Access user.roles.nombre */}
+            <p className="text-gray-400 text-sm italic md:text-base">{user.roles?.nombre}</p>
           </div>
         )}
 
@@ -64,7 +63,8 @@ export function DashboardSidebar({ user, onNavigate, activeContent }: DashboardS
           isActive={activeContent === 'dashboard'}
         />
 
-        {user?.rol === 'admin' && (
+        {/* CORRECTED: Check user.roles.nombre */}
+        {user?.roles?.nombre?.toLowerCase() === 'admin' && ( // Added .toLowerCase() for robustness
           <>
             <NavigationButton
               iconSrc="/users.png"

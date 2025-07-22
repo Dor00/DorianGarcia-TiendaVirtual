@@ -42,24 +42,28 @@ export const withAuth = (
           return;
         }
 
+        // Modified select statement to join with the 'roles' table and get the role name
         const { data: userData, error: profileError } = await supabaseBrowser
           .from("usuarios")
-          .select("rol")
+          .select("id_rol, roles(nombre)") // Select id_rol and the name from the joined roles table
           .eq("id", user.id)
           .single();
 
-        if (profileError || !userData) {
-          console.error("Error al obtener rol:", profileError?.message);
+        if (profileError || !userData || !userData.roles) {
+          console.error("Error al obtener rol:", profileError?.message || "Rol no encontrado.");
           await supabaseBrowser.auth.signOut();
           router.push("/login");
           return;
         }
 
-        if (allowedRoles.includes(userData.rol)) {
+        // Access the role name from the nested 'roles' object
+        const userRoleName = userData.roles.nombre;
+
+        if (allowedRoles.includes(userRoleName)) {
           setHasAccess(true);
         } else {
-          console.warn(`Acceso denegado. Rol: ${userData.rol}`);
-          router.push("/unauthorized");
+          console.warn(`Acceso denegado. Rol: ${userRoleName}`);
+          router.push("/unauthorized"); // Consider redirecting to a generic unauthorized page
         }
 
         setLoading(false);

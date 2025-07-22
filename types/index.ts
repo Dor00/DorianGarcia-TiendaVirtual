@@ -29,11 +29,30 @@ export interface Cart {
   items: CartItem[];
 }
 
+
+export interface UserProfile {
+  id: string;
+  nombre: string;
+  email: string;  
+  imagen?: string | null;
+  
+}
+
+
+
+
+
+
 // NUEVA INTERFAZ DE USUARIO - Agrega esto a tu archivo types/index.ts
 export interface User {
   id: string;
   nombre: string;
-  email: string;
-  rol: 'user' | 'admin'; // El rol debe ser estrictamente 'user' o 'admin'
+  email: string;  
   imagen: string | null; // La imagen puede ser una string o null (si no hay imagen de perfil)
+  id_rol?: string | null; // Added for compatibility with UserCrudForm
+  roles?: {
+    nombre: string;
+  };
+  created_at?: string;
+  updated_at?: string;
 }

@@ -1,23 +1,15 @@
+//components/user/UserProfilePage.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase";
 import { useRouter } from "next/router";
+import { UserProfile } from "@/types";
 
 interface UserProfilePageProps {
   userId: string;
 }
 
-
-
-interface UserProfile {
-  id: string;
-  nombre: string;
-  email: string;
-  rol: string;
-  imagen?: string | null;
-  
-}
 
 export default function UserProfilePage({ userId }: UserProfilePageProps) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -39,7 +31,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
 
       const { data, error } = await supabaseBrowser!
         .from("usuarios")
-        .select("id, nombre, email, rol, imagen")
+        .select("id, nombre, email, imagen")
         .eq("id", user.id)
         .single();
 
@@ -122,16 +114,7 @@ export default function UserProfilePage({ userId }: UserProfilePageProps) {
             className="w-full p-2 bg-gray-700 text-white rounded cursor-not-allowed"
           />
         </div>
-
-        <div>
-          <label className="block text-gray-400 mb-1">Rol</label>
-          <input
-            type="text"
-            value={profile.rol}
-            disabled
-            className="w-full p-2 bg-gray-700 text-white rounded cursor-not-allowed"
-          />
-        </div>
+       
 
         <button
           onClick={handleUpdateProfile}

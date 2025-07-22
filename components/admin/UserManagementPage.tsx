@@ -56,7 +56,7 @@ export function UserManagementPage() {
 
     setLoadingUsers(true);
     setUsersError(null);
-    
+
     try {
       const response = await fetch('/api/admin/users', {
         headers: {
@@ -86,7 +86,7 @@ export function UserManagementPage() {
     } catch (error: any) {
       console.error('Error fetching users:', error);
       setUsersError(error.message || 'Error al cargar usuarios');
-      
+
       // Redirigir si no está autorizado
       if (error.message.includes('401') || error.message.includes('403')) {
         router.push('/login');
@@ -187,7 +187,7 @@ export function UserManagementPage() {
               onError={handleCrudError}
               onCancelEdit={handleCancelEdit} onSuccessAndRefresh={function (): void {
                 throw new Error('Function not implemented.');
-              } }            />
+              }} />
           </div>
           <div className="lg:col-span-2">
             <UsersTable

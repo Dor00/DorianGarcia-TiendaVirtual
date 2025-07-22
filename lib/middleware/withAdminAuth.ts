@@ -1,3 +1,4 @@
+//lib/middleware/withAdminAuth.ts
 import { NextApiHandler, NextApiRequest, NextApiResponse } from 'next';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getServiceSupabase } from '@/lib/supabaseService';

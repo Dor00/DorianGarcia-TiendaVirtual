@@ -13,7 +13,7 @@ export function SignUpForm() {
     email: '',
     contrasena: '',
     confirmarContrasena: '',
-    rol: 'user' as const
+    rol: '053ee653-f7fd-4ecd-b6b3-d2e307b5f7fc' as const
   });
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -44,49 +44,34 @@ export function SignUpForm() {
 
     try {
       // 1. Registro de usuario
-      const { data: signUpData, error: signUpError } = await supabaseBrowser!.auth.signUp({
+      const supabase = supabaseBrowser;
+      if (!supabase) {
+        throw new Error('Cliente de Supabase no disponible');
+      }
+
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.contrasena,
         options: {
           data: {
-            nombre: formData.nombre,
-            rol: formData.rol
+            nombre: formData.nombre
+            //rol: formData.rol
           }
         }
       });
 
       if (signUpError) throw signUpError;
-      if (!signUpData.user) throw new Error('No se pudo crear el usuario');
-
-      // 2. Subida de imagen (opcional)
-      let imageUrl = null;
-      if (selectedFile) {
-        const fileExt = selectedFile.name.split('.').pop();
-        const fileName = `${signUpData.user.id}-${Date.now()}.${fileExt}`;
-        const filePath = `avatars/${fileName}`;
-
-        const { error: uploadError } = await supabaseBrowser!.storage
-          .from('avatars')
-          .upload(filePath, selectedFile);
-
-        if (!uploadError) {
-          const { data: urlData } = supabaseBrowser!.storage
-            .from('avatars')
-            .getPublicUrl(filePath);
-          
-          imageUrl = urlData.publicUrl;
-        }
-      }
+      if (!signUpData.user) throw new Error('No se pudo crear el usuario');      
 
       // 3. Actualización del perfil
-      const { error: profileError } = await supabaseBrowser!
+      const { error: profileError } = await supabase
         .from('usuarios')
         .upsert({
           id: signUpData.user.id,
           nombre: formData.nombre,
           email: formData.email,
-          rol: formData.rol,
-          imagen: imageUrl,
+          id_rol: formData.rol,
+          //imagen: imageUrl,
           updated_at: new Date().toISOString()
         });
 
@@ -97,11 +82,15 @@ export function SignUpForm() {
     } catch (err: any) {
       console.error('Error en registro:', err);
       setError(err.message || 'Error al registrar el usuario');
+      router.push(`/login?error=${error}`);
+
+
     } finally {
       setLoading(false);
     }
   };
-
+  
+  
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
       <FormField
@@ -150,26 +139,13 @@ export function SignUpForm() {
         disabled={loading || success}
         autoComplete="new-password"
       />
-
-      <div className="flex flex-col">
-        <label className="block text-gray-300 text-sm mb-2">
-          Foto de perfil (opcional)
-        </label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          disabled={loading || success}
-          className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0
-            file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700
-            hover:file:bg-blue-100"
-        />
-      </div>
+      
 
       {error && (
         <div className="text-red-400 text-sm text-center mt-2">{error}</div>
-      )}
+      )}     
 
+      
       <button
         type="submit"
         disabled={loading || success}

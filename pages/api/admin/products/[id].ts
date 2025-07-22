@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { withAdminAuth } from '@/lib/middleware/withAdminAuth';
+import { withAuth } from '@/lib/middleware/withAuth';
+import { withRole } from '@/lib/middleware/withRole';
 import formidable from 'formidable';
 import fs from 'fs';
 import path from 'path';
@@ -107,4 +108,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withAdminAuth(handler);
+export default withRole(withAuth(handler, []), 'admin');

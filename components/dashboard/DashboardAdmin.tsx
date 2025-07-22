@@ -5,62 +5,71 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabaseBrowser } from '@/lib/supabase';
 import { DashboardSidebar } from '../../components/sidebar/DashboardSidebar';
 import { Header } from "../../components/head/Header";
-
-// Importa el componente completo de gestión de usuarios
 import { UserManagementPage } from '../../components/admin/UserManagementPage';
-// Importa el componente de gestión de productos
 import { ProductManagementComponent } from '../../components/admin/ProductManagementComponent';
-
-// Importa la interfaz User desde tu archivo de tipos central
 import { User } from '@/types';
 
 export function DashboardAdmin() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeContent, setActiveContent] = useState('dashboard');
+  const [error, setError] = useState<string | null>(null);
 
   const fetchUserSession = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      if (!supabaseBrowser) {
-        console.error("ERROR (DashboardAdmin): supabaseBrowser is undefined.");
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-      const { data: { session }, error: sessionError } = await supabaseBrowser.auth.getSession();
-
-      if (sessionError) {
-        console.error("ERROR (DashboardAdmin): Error al obtener sesión de Supabase:", sessionError.message);
-        setUser(null);
-        setLoading(false);
-        return;
+      const supabase = supabaseBrowser;
+      if (!supabase) {
+        throw new Error("Supabase client not initialized");
       }
 
-      if (session) {
-        const { data: userData, error: userError } = await supabaseBrowser
-          .from('usuarios')
-          .select('id, nombre, email, rol, imagen')
-          .eq('id', session.user.id)
-          .single();
+      // 1. Obtener sesión
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (userError) {
-          console.error("ERROR (DashboardAdmin): Error al obtener datos del usuario:", userError.message);
-          setUser(null);
-        } else if (userData) {
-          // Castear a User para asegurar el tipo de rol y imagen
-          setUser(userData as User);
-          console.log("DEBUG (DashboardAdmin): Usuario cargado:", userData.rol);
-        } else {
-          console.log("DEBUG (DashboardAdmin): No se encontraron datos para el usuario logueado en la tabla 'usuarios'.");
-          setUser(null);
+      if (sessionError || !session) {
+        throw new Error(sessionError?.message || "No active session found");
+      }
+
+      // 2. Obtener datos del usuario con su rol
+      const { data: userData, error: userError } = await supabase
+        .from('usuarios')
+        .select(`
+          id, 
+          nombre, 
+          email,
+          imagen,
+          roles!inner(nombre)
+        `)
+        .eq('id', session.user.id)
+        .single();
+
+      if (userError || !userData) {
+        throw new Error(userError?.message || "User data not found");
+      }
+
+      // 3. Validar estructura de datos
+      if (!userData.roles || !userData.roles.nombre) {
+        throw new Error("Role information is incomplete");
+      }
+
+      // 4. Formatear datos del usuario
+      const formattedUser: User = {
+        id: userData.id,
+        nombre: userData.nombre,
+        email: userData.email,
+        imagen: userData.imagen,
+        roles: {
+          nombre: userData.roles.nombre
         }
-      } else {
-        console.log("DEBUG (DashboardAdmin): No hay sesión activa.");
-        setUser(null);
-      }
-    } catch (error: any) {
-      console.error("ERROR (DashboardAdmin): Error inesperado al cargar la sesión/usuario:", error.message);
+      };
+
+      setUser(formattedUser);
+      console.log("User data loaded successfully:", formattedUser);
+
+    } catch (err: any) {
+      console.error("Error in fetchUserSession:", err.message);
+      setError(err.message);
       setUser(null);
     } finally {
       setLoading(false);
@@ -70,41 +79,31 @@ export function DashboardAdmin() {
   useEffect(() => {
     fetchUserSession();
 
-    let authListener: any = null;
-    if (supabaseBrowser) {
-      const { data } = supabaseBrowser.auth.onAuthStateChange(
-        (event: string, session: any) => {
-          console.log("DEBUG (DashboardAdmin): Auth state changed:", event);
-          if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-            fetchUserSession();
-          }
+    // Configurar listener de cambios de autenticación
+    const supabase = supabaseBrowser;
+    const { data: authListener } = supabase?.auth.onAuthStateChange(
+      (event: string, session: any) => {
+        console.log("Auth state changed:", event);
+        if (['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED'].includes(event)) {
+          fetchUserSession();
         }
-      );
-      authListener = data;
-    }
+      }
+    ) || { subscription: null };
 
     return () => {
-      if (authListener && authListener.subscription) {
-        authListener.subscription.unsubscribe();
-      }
+      authListener?.subscription?.unsubscribe();
     };
   }, [fetchUserSession]);
 
   const handleLogout = async () => {
-    console.log("DEBUG (DashboardAdmin): Intentando cerrar sesión desde DashboardAdmin...");
     try {
-      if (!supabaseBrowser) {
-        console.error("ERROR (DashboardAdmin): supabaseBrowser is undefined. No se puede cerrar sesión.");
-        return;
-      }
-      const { error: signOutError } = await supabaseBrowser.auth.signOut();
-      if (signOutError) {
-        console.error("ERROR (DashboardAdmin): Fallo al cerrar sesión en Supabase desde DashboardAdmin:", signOutError.message);
-      } else {
-        console.log("DEBUG (DashboardAdmin): Sesión cerrada correctamente en Supabase. Redireccionando...");
-      }
-    } catch (error: any) {
-      console.error("ERROR (DashboardAdmin): Error inesperado al cerrar sesión:", error.message);
+      const supabase = supabaseBrowser;
+      const { error } = await supabase?.auth.signOut() || {};
+      if (error) throw error;
+      setUser(null);
+    } catch (err: any) {
+      console.error("Logout failed:", err.message);
+      setError(err.message);
     }
   };
 
@@ -116,15 +115,23 @@ export function DashboardAdmin() {
     );
   }
 
-  if (!user) {
+  if (error) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-800 text-red-500 text-xl">
-        Acceso denegado o sesión no válida. Por favor, inicia sesión.
+        Error: {error}
       </div>
     );
   }
 
-  if (user.rol !== 'admin') {
+  if (!user) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gray-800 text-red-500 text-xl">
+        Acceso denegado. Por favor, inicia sesión.
+      </div>
+    );
+  }
+
+  if (!user.roles || user.roles.nombre.toLowerCase() !== 'admin') {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-800 text-red-500 text-xl">
         No tienes permisos de administrador para acceder a esta sección.
@@ -147,15 +154,15 @@ export function DashboardAdmin() {
             <div className="text-white text-3xl md:text-4xl">Bienvenido a tu Dashboard, {user?.nombre || 'Administrador'}!</div>
           )}
 
-          {activeContent === 'user-management' && user.rol === 'admin' && (
+          {activeContent === 'user-management' && user.roles?.nombre === 'admin' && (
             <UserManagementPage />
           )}
 
-          {activeContent === 'product-management' && user.rol === 'admin' && (
+          {activeContent === 'product-management' && user.roles?.nombre === 'admin' && (
             <ProductManagementComponent />
           )}
 
-          {user.rol !== 'admin' && (activeContent === 'user-management' || activeContent === 'product-management') && (
+          {user.roles?.nombre !== 'admin' && (activeContent === 'user-management' || activeContent === 'product-management') && (
             <div className="text-red-500 text-xl">No tienes permisos para ver esta sección.</div>
           )}
         </main>

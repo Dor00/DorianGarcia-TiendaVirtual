@@ -1,14 +1,15 @@
-//pages/cart.tsx
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useCart } from "@/hooks/useCart";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import axios from "axios";
 import { supabaseBrowser } from "@/lib/supabase";
+import { Loader } from "@/components/ui/Loader";
+import { ErrorPage } from "@/components/ui/ErrorPage";
 
 export default function CartPage() {
+  const [error, setError] = useState<string | null>(null);
   const { cart, updateCartItemQuantity, removeCartItem, fetchCart } = useCart();
   const router = useRouter();
 
@@ -18,8 +19,8 @@ export default function CartPage() {
 
     if (status === "failure" || status === "pending") {
       localStorage.removeItem("cart_anonymous");
-      fetchCart(); // Recarga el carrito vacío
-      router.replace("/cart"); // Limpia los parámetros de la URL
+      fetchCart();
+      router.replace("/cart");
     }
   }, [router, fetchCart]);
 
@@ -28,50 +29,7 @@ export default function CartPage() {
     0
   );
 
-  const handleCheckout = async () => {
-    try {
-      const { data: { user } } = await supabaseBrowser!.auth.getUser();
-      // Add a check for supabaseBrowser being defined
-      if (!supabaseBrowser) {
-        console.error("Supabase client not initialized.");
-        return;
-      }
-
-      const userId = user?.id || null;
-
-      if (cart.length === 0) {
-        console.error("El carrito está vacío.");
-        return;
-      }
-
-      const createOrderRes = await axios.post<{ order: { id: string } }>("/api/orders/create", {
-        total,
-        items: cart,
-        user_id: userId,
-      });
-
-      const { order } = createOrderRes.data;
-
-      if (!order?.id) {
-        throw new Error("No se pudo crear el pedido en la base de datos.");
-      }
-
-      const response = await axios.post("/api/mercadopago/create-preference", {
-        items: cart,
-        order_id: order.id,
-      });
-
-      const data = response.data as { init_point?: string };
-
-      if (data.init_point) {
-        window.location.href = data.init_point;
-      } else {
-        throw new Error("No se recibió un enlace de pago válido.");
-      }
-    } catch (err: any) {
-      console.error("Error en el proceso de checkout:", err.message);
-    }
-  };
+  if (error) return <ErrorPage message={error} />;
 
   return (
     <main className="min-h-screen bg-gray-900 text-white p-6">
@@ -137,10 +95,10 @@ export default function CartPage() {
                 Total: ${total.toFixed(2)} COP
               </p>
               <button
-                onClick={handleCheckout}
+                onClick={() => router.push("/checkout")}
                 className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
               >
-                Pagar con MercadoPago
+                Ir a Checkout
               </button>
             </div>
           </div>

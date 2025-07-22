@@ -1,20 +1,17 @@
-// UserCrudForm.tsx
+// components/user/UserCrudForm.tsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabaseBrowser } from '@/lib/supabase';
+import { supabaseBrowser } from '@/lib/supabase'; // Assuming this is your client-side Supabase instance
 import { FormField } from '@/components/signUp/FormField';
 import { EmailField } from '@/components/signUp/EmailField';
+import { User } from '@/types'; // Import the global User type
 
-export interface User {
+// Interface for roles fetched from the database
+interface Role {
   id: string;
   nombre: string;
-  email: string;
-  rol: 'user' | 'admin';
-  imagen: string | null;
-  created_at?: string;
-  updated_at?: string;
 }
 
 interface UserCrudFormProps {
@@ -22,7 +19,7 @@ interface UserCrudFormProps {
   onSuccess: () => void;
   onError: (message: string) => void;
   onCancelEdit: () => void;
-  onSuccessAndRefresh?: () => void; // Nueva función opcional para refrescar la lista
+  onSuccessAndRefresh?: () => void; // Optional function for refreshing list
 }
 
 export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: UserCrudFormProps) {
@@ -30,25 +27,46 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
-    rol: 'user' as 'user' | 'admin',
     contrasena: '',
     confirmarContrasena: '',
+    id_rol: '', // Initialize with empty string for UUID
     imagen: null as File | string | null
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [roles, setRoles] = useState<Role[]>([]); // State to store available roles
 
-  // Cargar datos del usuario al editar
+  // Fetch roles from Supabase on component mount
+  useEffect(() => {
+    const fetchRoles = async () => {
+      const supabase = supabaseBrowser;
+      if (!supabase) {
+        setError('Error al conectar con la base de datos.');
+        return;
+      }
+      
+      const { data, error } = await supabase.from('roles').select('*');
+      if (error) {
+        console.error('Error fetching roles:', error);
+        setError('Error al cargar roles.');
+      } else {
+        setRoles(data || []);
+      }
+    };
+    fetchRoles();
+  }, []);
+
+  // Load user data when editingUser changes
   useEffect(() => {
     if (editingUser) {
       setFormData({
         nombre: editingUser.nombre,
         email: editingUser.email,
-        rol: editingUser.rol,
         contrasena: '',
         confirmarContrasena: '',
+        id_rol: editingUser.id_rol || '', // Populate id_rol from editingUser
         imagen: editingUser.imagen
       });
       setImagePreview(editingUser.imagen);
@@ -61,9 +79,9 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
     setFormData({
       nombre: '',
       email: '',
-      rol: 'user',
       contrasena: '',
       confirmarContrasena: '',
+      id_rol: '', // Reset id_rol
       imagen: null
     });
     setSelectedFile(null);
@@ -80,8 +98,8 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
-      
-      // Crear preview de la imagen
+
+      // Create image preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -100,13 +118,13 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
   };
 
   const validateForm = () => {
-    // Validación básica
-    if (!formData.nombre || !formData.email) {
-      setError('Nombre y email son campos requeridos');
+    // Basic validation
+    if (!formData.nombre || !formData.email || !formData.id_rol) { // Added id_rol validation
+      setError('Nombre, email y rol son campos requeridos');
       return false;
     }
 
-    // Validación de contraseña para nuevo usuario o cambio de contraseña
+    // Password validation for new user or password change
     if (!editingUser && (!formData.contrasena || formData.contrasena.length < 6)) {
       setError('La contraseña debe tener al menos 6 caracteres');
       return false;
@@ -121,13 +139,14 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
   };
 
   const uploadImage = async (userId: string) => {
-    if (!selectedFile || !supabaseBrowser) return null;
+    const supabase = supabaseBrowser;
+    if (!selectedFile || !supabase) return null;
 
     const fileExt = selectedFile.name.split('.').pop();
     const fileName = `${userId}-${Date.now()}.${fileExt}`;
     const filePath = `avatars/${fileName}`;
 
-    const { error: uploadError } = await supabaseBrowser.storage
+    const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(filePath, selectedFile, {
         cacheControl: '3600',
@@ -139,7 +158,7 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
       throw new Error('Error al subir la imagen');
     }
 
-    const { data: { publicUrl } } = supabaseBrowser.storage
+    const { data: { publicUrl } } = supabase.storage
       .from('avatars')
       .getPublicUrl(filePath);
 
@@ -157,34 +176,48 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
     }
 
     try {
-      // 1. Subir imagen si hay archivo seleccionado
-      let imageUrl = formData.imagen as string | null;
-      if (selectedFile) {
-        const tempUserId = editingUser?.id || `temp-${Date.now()}`;
-        imageUrl = await uploadImage(tempUserId);
-      } else if (formData.imagen === null) {
-        imageUrl = null; // Usuario eliminó la imagen
+      // Get the session token
+      const supabase = supabaseBrowser;
+      if (!supabase) {
+        throw new Error('Error al conectar con la base de datos.');
+      }
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No se encontró sesión de usuario. Por favor, inicie sesión.');
       }
 
-      // 2. Preparar datos para enviar
+      // 1. Upload image if a file is selected
+      let imageUrl = formData.imagen as string | null;
+      if (selectedFile) {
+        // Use the actual user ID from the session if creating, otherwise from editingUser
+        const tempUserId = editingUser?.id || session.user.id;
+        imageUrl = await uploadImage(tempUserId);
+      } else if (formData.imagen === null) {
+        imageUrl = null; // User removed the image
+      }
+
+      // 2. Prepare data to send
       const userData = {
         nombre: formData.nombre,
         email: formData.email,
-        rol: formData.rol,
         imagen: imageUrl,
+        id_rol: formData.id_rol, // Ensure id_rol is sent
         ...(formData.contrasena && { contrasena: formData.contrasena })
       };
 
-      // 3. Enviar a la API
-      const endpoint = editingUser 
-        ? `/api/admin/users/${editingUser.id}`
-        : '/api/admin/users';
+      // 3. Send to API
+      const endpoint = editingUser
+        ? `/api/admin/users/${editingUser.id}` // PUT endpoint with ID
+        : '/api/admin/users'; // POST endpoint without ID
+
       const method = editingUser ? 'PUT' : 'POST';
 
       const response = await fetch(endpoint, {
         method,
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`, // Send the Authorization header
         },
         body: JSON.stringify(userData)
       });
@@ -194,12 +227,12 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
         throw new Error(errorData.error || 'Error en la operación');
       }
 
-      // 4. Manejar éxito
+      // 4. Handle success
       onSuccess();
       resetForm();
-      
+
       if (!editingUser) {
-        // Si es creación, mostrar mensaje de éxito
+        // If it's a creation, clear error message
         setError(null);
       }
 
@@ -219,7 +252,7 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Campo Nombre */}
+        {/* Nombre Field */}
         <FormField
           label="Nombre Completo"
           type="text"
@@ -230,17 +263,17 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
           required
         />
 
-        {/* Campo Email */}
+        {/* Email Field */}
         <EmailField
           name="email"
           value={formData.email}
           onChange={handleChange}
           placeholder="Ej: usuario@ejemplo.com"
           required
-          disabled={!!editingUser} // No permitir cambiar email en edición
+          disabled={!!editingUser} // Do not allow changing email in edit mode
         />
 
-        {/* Campos de Contraseña (solo para nuevo usuario o cambio) */}
+        {/* Password Fields (only for new user or password change) */}
         {!editingUser && (
           <>
             <FormField
@@ -265,32 +298,40 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
           </>
         )}
 
-        {/* Campo Rol */}
-        <FormField
-          label="Rol del Usuario"
-          type="select"
-          name="rol"
-          value={formData.rol}
-          onChange={handleChange}
-          required
-          options={[
-            { value: 'user', label: 'Usuario Normal' },
-            { value: 'admin', label: 'Administrador' }
-          ]}
-        />
+        {/* Role Selection Field */}
+        <div className="space-y-2">
+          <label htmlFor="id_rol" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Rol
+          </label>
+          <select
+            id="id_rol"
+            name="id_rol"
+            value={formData.id_rol}
+            onChange={handleChange}
+            required
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          >
+            <option value="">Selecciona un rol</option>
+            {roles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        {/* Campo Imagen */}
+        {/* Image Field */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Imagen de Perfil
           </label>
-          
-          {/* Preview de imagen */}
+
+          {/* Image Preview */}
           {imagePreview && (
             <div className="flex items-center space-x-4 mb-2">
-              <img 
-                src={imagePreview} 
-                alt="Preview" 
+              <img
+                src={imagePreview}
+                alt="Preview"
                 className="h-16 w-16 rounded-full object-cover border border-gray-300"
               />
               <button
@@ -302,8 +343,8 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
               </button>
             </div>
           )}
-          
-          {/* Input de archivo */}
+
+          {/* File Input */}
           <input
             type="file"
             id="imagen"
@@ -324,14 +365,14 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
           </p>
         </div>
 
-        {/* Mensajes de error */}
+        {/* Error Messages */}
         {error && (
           <div className="p-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 rounded-md">
             {error}
           </div>
         )}
 
-        {/* Botones de acción */}
+        {/* Action Buttons */}
         <div className="flex space-x-3 pt-2">
           <button
             type="submit"
@@ -371,3 +412,5 @@ export function UserCrudForm({ editingUser, onSuccess, onError, onCancelEdit }: 
     </div>
   );
 }
+
+export type { User };
